@@ -34,6 +34,21 @@ describe("analyzeBrief", () => {
     expect(analysis.model).toBe("gemini-decision-1 + gemini-4-hydrogen");
   });
 
+  test("calls the global fetch without a foreign `this` (Workers throws Illegal invocation)", async () => {
+    const realFetch = globalThis.fetch;
+    const fake = fakeGemini({ decisions: decisionsOk, generate: generateOk(analysisOk) });
+    globalThis.fetch = function (this: unknown, input: string, init: RequestInit) {
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      return fake(input, init);
+    } as typeof fetch;
+    try {
+      const analysis = await analyzeBrief(sampleBrief, { config: testAiConfig });
+      expect(analysis.result.priority).toBe("High");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   test("asks the text model for low thinking effort", async () => {
     const bodies: Record<string, unknown>[] = [];
     const inner = fakeGemini({ decisions: decisionsOk, generate: generateOk(analysisOk) });

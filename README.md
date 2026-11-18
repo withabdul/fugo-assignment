@@ -2,8 +2,9 @@
 
 An internal tool for Fugo Creative. Clients send a project brief through a public form. Each brief is analyzed by Gemini in the background. The sales team logs in to a dashboard to see a summary, category, and priority for each brief, and moves it through the pipeline.
 
-- **Live:** `https://<your-worker>.workers.dev` _(fill in after deploy)_
-- **Admin login:** `<email>` / `<password>` _(fill in after deploy)_
+- **Live form:** https://fugo-brief-hub.shohih242.workers.dev
+- **Admin dashboard:** https://fugo-brief-hub.shohih242.workers.dev/admin
+- **Admin login:** sent in the submission email, not written here because this repo is public.
 
 ## Stack
 
@@ -55,7 +56,7 @@ This starts PostgreSQL 18 and the app (Bun serves the API and the built frontend
 bun run test
 ```
 
-28 tests, no network and no database needed. They cover:
+29 tests, no network and no database needed. They cover:
 
 - AI output validation: valid output, missing field, extra field, non-JSON, unknown category, HTTP error, blocked prompt, timeout, and the priority rounding rule.
 - Form validation: email format, past date, empty fields, and the WIB date boundary.
@@ -212,6 +213,11 @@ Claude Code (Claude Opus 5.5) in the terminal:
 4. **Deploy target.** Claude recommended Railway. I chose Cloudflare, so the design changed to one Worker with static assets, `waitUntil` for background work, and a DB client per request.
 5. **Dashboard did not show new briefs.** While testing by hand I found that new briefs only appeared after a page reload. Claude's list refreshed only while a brief was being processed by the AI. It now polls every 10 s (4 s while the AI runs), stops in a hidden tab, and refreshes when the tab is shown again.
 6. **Email draft loader disappeared.** While testing I started an email draft and went back to the list. The draft was still made, but when I opened the brief again the loader was gone and the button could be clicked again. Claude had kept the "generating" state only in React state, which is lost when the page unmounts. Now the draft runs like the analysis: the server claims the row (`email_draft_status = processing`, one conditional UPDATE, `409` on a double click), answers `202`, writes the draft in the background, and the page polls that status. Claude also fixed two related races on the detail page: the page remounts per brief id, and only the newest request may update the screen, so an old poll cannot undo a newer result.
+
+Bugs found by the live smoke test after deploy (Claude ran it at my request):
+
+- **"Illegal invocation" on Cloudflare.** Every AI call failed on the first live brief. Claude had stored the global `fetch` in an object and called it as `ctx.fetchFn(...)`. Bun accepts that, but Workers throws when `fetch` gets a different `this`. The tests used a fake `fetch`, so they missed it. Fixed by wrapping it (`(input, init) => fetch(input, init)`), with a regression test that throws like Workers does. The failed brief was then fixed with **Proses ulang AI**, which also tested the retry path live.
+- **Email draft without line breaks.** The first live draft was one long paragraph, numbered list included. The prompt and the JSON schema description now ask for line breaks between greeting, paragraphs, list items, and sign-off.
 
 The full timeline, with my prompts quoted and the commit for each step, is in [docs/ai-session-log.md](docs/ai-session-log.md). It is taken from the Claude Code session transcript.
 

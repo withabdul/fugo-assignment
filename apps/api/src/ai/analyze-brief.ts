@@ -49,7 +49,9 @@ export interface BriefAnalysis {
 function callContext(deps: AiDeps): GeminiCallContext {
   return {
     config: deps.config,
-    fetchFn: deps.fetchFn ?? fetch,
+    // Wrapped, not `fetch` itself: it is called as ctx.fetchFn(...), and on
+    // Workers a global fetch called with another `this` throws "Illegal invocation".
+    fetchFn: deps.fetchFn ?? ((input, init) => fetch(input, init)),
     signal: AbortSignal.timeout(deps.config.timeoutMs),
   };
 }

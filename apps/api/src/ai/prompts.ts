@@ -143,13 +143,18 @@ export const EMAIL_SYSTEM_INSTRUCTION = [
   "Thank them, restate their need in one sentence, and ask the missing information as a short numbered list.",
   "Propose a short call to discuss next steps. Do not promise prices, dates, or deliverables.",
   "Sign off as 'Tim Fugo Creative'. Plain text only, no markdown. Keep the body under 200 words.",
+  "Format the body like a real email: greeting on its own line, a blank line between paragraphs, " +
+    "each numbered question on its own line, and the sign-off on its own lines. Use \\n for line breaks.",
 ].join("\n");
 
 export const EMAIL_JSON_SCHEMA = {
   type: "object",
   properties: {
     subject: { type: "string" },
-    body: { type: "string" },
+    body: {
+      type: "string",
+      description: "Plain text email body with \\n line breaks between greeting, paragraphs, list items, and sign-off",
+    },
   },
   required: ["subject", "body"],
   additionalProperties: false,
