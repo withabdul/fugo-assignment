@@ -19,16 +19,16 @@ An internal tool for Fugo Creative. Clients send a project brief through a publi
 
 ## Run locally
 
-Requirements: Bun 1.4+, and Postgres (Docker or any local install).
+Requirements: Bun 1.4+ and a local PostgreSQL (developed on PostgreSQL 18).
 
 ```bash
 bun install
 
-# 1. Database
-docker compose up -d db                # Postgres 18 on localhost:5433, or use your own Postgres
+# 1. Database: create an empty database, for example
+createdb fugo
 
 # 2. Env
-cp apps/api/.env.example apps/api/.env  # then fill GEMINI_API_KEY, SESSION_SECRET, ADMIN_PASSWORD
+cp apps/api/.env.example apps/api/.env  # set DATABASE_URL, GEMINI_API_KEY, SESSION_SECRET, ADMIN_PASSWORD
 
 # 3. Tables
 bun run db:migrate
@@ -40,14 +40,14 @@ bun run dev:web   # Vite on http://localhost:5173 (proxies /api to 8787)
 
 Open http://localhost:5173 for the form and http://localhost:5173/admin for the dashboard.
 
-### With Docker only
+### With Docker (for example on a VPS)
 
 ```bash
-cp .env.example .env   # fill GEMINI_API_KEY, ADMIN_PASSWORD, SESSION_SECRET
-docker compose up --build
+cp .env.example .env   # fill POSTGRES_PASSWORD, GEMINI_API_KEY, ADMIN_PASSWORD, SESSION_SECRET
+docker compose up -d --build
 ```
 
-The app runs on http://localhost:8787. Migrations run when the container starts.
+This starts PostgreSQL 18 and the app (Bun serves the API and the built frontend) on port 8787. Migrations run when the app container starts. The database port is not published, so only the app container can reach it. Put a reverse proxy with HTTPS (Caddy, Nginx) in front of port 8787 so the session cookie is sent as `Secure`.
 
 ### Tests
 
