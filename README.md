@@ -204,6 +204,9 @@ Claude Code (Claude Opus 5.5) in the terminal:
 2. **Thinking effort.** Claude's first version called Hydrogen with the default thinking level. I asked for `low`, because the task is short extraction and writing. It is now `thinkingConfig.thinkingLevel = "low"`, configurable with `GEMINI_THINKING_LEVEL`, and a test checks that the request sends it.
 3. **Docker and PostgreSQL version.** Claude's `docker-compose.yml` used `postgres:17-alpine`. I asked for PostgreSQL 18 to match my local version. Claude switched to 18 and moved the volume to `/var/lib/postgresql` (the image changed its data path in 18). Claude then assumed I would run compose on this laptop next to my native Postgres, and moved the DB to host port 5433. I corrected that: compose is for my VPS, and the laptop uses native Postgres. The final compose publishes no DB port, and the DB password comes from `.env` instead of being hard-coded.
 4. **Deploy target.** Claude recommended Railway. I chose Cloudflare, so the design changed to one Worker with static assets, `waitUntil` for background work, and a DB client per request.
+5. **Dashboard did not show new briefs.** While testing by hand I found that new briefs only appeared after a page reload. Claude's list refreshed only while a brief was being processed by the AI. It now polls every 10 s (4 s while the AI runs), stops in a hidden tab, and refreshes when the tab is shown again.
+
+The full timeline, with my prompts quoted and the commit for each step, is in [docs/ai-session-log.md](docs/ai-session-log.md). It is taken from the Claude Code session transcript.
 
 Bugs that Claude's own tests caught (not my corrections, but worth noting):
 
