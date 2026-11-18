@@ -65,7 +65,7 @@ bun run test
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | yes | Postgres connection string. For Neon, use the pooled URL with `sslmode=require`. |
+| `DATABASE_URL` | yes (Bun) | Postgres connection string for local and Docker. With Neon add `sslmode=require`. On Cloudflare the Worker uses the `HYPERDRIVE` binding instead. |
 | `GEMINI_API_KEY` | yes | Google AI Studio key. |
 | `ADMIN_EMAIL` | yes | The one admin account. |
 | `ADMIN_PASSWORD` | yes | Password for the admin account. |
@@ -81,15 +81,20 @@ No secret is in the repo. Locally they live in `apps/api/.env` (git-ignored). On
 
 ## Deploy (Cloudflare Workers + Neon)
 
-One Worker serves both the API and the React build. `wrangler.jsonc` sends `/api/*` to Hono and everything else to static assets, with SPA fallback to `index.html`.
+One Worker serves both the API and the React build. `wrangler.jsonc` sends `/api/*` to Hono and everything else to static assets, with SPA fallback to `index.html`. The Worker reaches Neon through Cloudflare Hyperdrive.
 
 ```bash
-# once: create tables on Neon
-DATABASE_URL="postgres://...neon.tech/...?sslmode=require" bun run db:migrate
+# once: create tables on Neon (direct URL, not the -pooler one)
+DATABASE_URL="postgresql://...neon.tech/<db>?sslmode=require" bun run db:migrate
 
-# once: set secrets
+# once: Hyperdrive config with query caching OFF, then put the printed id
+# in apps/api/wrangler.jsonc ("hyperdrive" -> "id")
 cd apps/api
-bunx wrangler secret put DATABASE_URL
+bunx wrangler hyperdrive create fugo-db \
+  --connection-string="postgresql://...neon.tech/<db>?sslmode=require" \
+  --caching-disabled
+
+# once: set secrets (the database URL lives in Hyperdrive, not in a secret)
 bunx wrangler secret put GEMINI_API_KEY
 bunx wrangler secret put ADMIN_EMAIL
 bunx wrangler secret put ADMIN_PASSWORD
@@ -105,7 +110,7 @@ bun run deploy
 packages/shared   Zod schemas and types used by both apps (form input, AI result, enums)
 apps/api          Hono app
   src/app.ts            createApp(deps): routes, DB per request, error handler
-  src/worker.ts         Cloudflare entry: DB client per request, waitUntil for background work
+  src/worker.ts         Cloudflare entry: DB client per request via Hyperdrive, waitUntil for background work
   src/server.ts         Bun entry: one connection pool, plain promise for background work
   src/routes/           public-briefs, auth, admin-briefs
   src/ai/               gemini.ts (HTTP + response checks), prompts.ts, analyze-brief.ts
@@ -174,7 +179,7 @@ One table, `briefs`:
 - **One admin from env, session as a signed JWT in an httpOnly, SameSite=Lax cookie (8 h).** No users table. The password check is constant-time. Trade-off: a session cannot be revoked before it expires, except by rotating `SESSION_SECRET`.
 - **The brief text is untrusted input to the LLM.** The prompts put it inside `<brief>` tags and tell the model to treat it as data. The output is still validated, so the worst case of prompt injection is wrong text in a summary, not a broken record.
 - **Today is computed in Asia/Jakarta.** A client submitting at 01:00 WIB is not blocked by the server's UTC date.
-- **One DB connection per request on Workers.** Workers cannot keep a TCP pool across requests. Cloudflare Hyperdrive would remove the connection setup time. I did not add it to keep the setup small.
+- **Hyperdrive in front of Neon, with query caching off.** A Worker cannot keep a TCP pool across requests, so without Hyperdrive every request (and every 10 s dashboard poll) pays for TCP + TLS + auth to Neon in Singapore. Hyperdrive keeps a warm pool near the database, so a new client per request is cheap; the client uses `prepare: true` (Hyperdrive caches prepared statements) and `fetch_types: false` (no array columns). Caching is off on purpose: its default 60 s cache would hide new briefs and keep AI and draft status on "processing" in the polled dashboard. Trade-off: every read goes to Neon, which is fine for this volume.
 - **Not done:** rate limiting or a CAPTCHA on the public form, pagination (the list returns the newest 200), audit history of pipeline changes.
 
 ## AI usage log

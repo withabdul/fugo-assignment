@@ -2,7 +2,9 @@ import type { Db } from "./db/client";
 
 // Same keys in Cloudflare (wrangler secrets / vars) and in Bun (process.env).
 export interface Bindings {
+  // Bun (local, Docker) connects with DATABASE_URL. The Worker uses HYPERDRIVE.
   DATABASE_URL: string;
+  HYPERDRIVE?: Hyperdrive;
   GEMINI_API_KEY: string;
   GEMINI_TEXT_MODEL?: string;
   GEMINI_DECISION_MODEL?: string;

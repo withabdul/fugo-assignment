@@ -12,6 +12,18 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  // Connection pool in front of Neon. Create the config with caching OFF:
+  //   bunx wrangler hyperdrive create fugo-db --connection-string="<neon direct url>" --caching-disabled
+  // and put the printed id below. The id is not a secret; the connection
+  // string stays inside Cloudflare.
+  // For `wrangler dev`, set CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+  // to a local Postgres URL.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "REPLACE_WITH_HYPERDRIVE_ID"
+    }
+  ],
   "vars": {
     "GEMINI_TEXT_MODEL": "gemini-4-hydrogen",
     "GEMINI_DECISION_MODEL": "gemini-decision-1",
@@ -19,5 +31,5 @@
     "AI_TIMEOUT_MS": "25000"
   }
   // Secrets (set with `wrangler secret put <NAME>`, never in this file):
-  // DATABASE_URL, GEMINI_API_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, SESSION_SECRET
+  // GEMINI_API_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, SESSION_SECRET
 }
