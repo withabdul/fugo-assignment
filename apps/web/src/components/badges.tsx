@@ -16,7 +16,7 @@ export function PriorityBadge({ priority }: { priority: Priority | null }) {
 const AI_STATUS: Record<AiStatus, { label: string; className: string }> = {
   pending: { label: "Menunggu", className: "bg-slate-100 text-slate-600" },
   processing: { label: "Diproses", className: "bg-sky-50 text-sky-700" },
-  done: { label: "Selesai", className: "bg-emerald-50 text-emerald-700" },
+  done: { label: "Selesai", className: "bg-brand-soft text-brand-deep" },
   failed: { label: "Gagal", className: "bg-red-50 text-red-700" },
 };
 
@@ -37,7 +37,7 @@ const PIPELINE_STYLES: Record<PipelineStatus, string> = {
   new: "bg-slate-100 text-slate-700",
   contacted: "bg-sky-50 text-sky-700",
   proposal: "bg-violet-50 text-violet-700",
-  won: "bg-emerald-50 text-emerald-700",
+  won: "bg-brand-soft text-brand-deep",
   lost: "bg-stone-100 text-stone-500",
 };
 

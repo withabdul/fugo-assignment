@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
+import { FugoLogo, Spinner } from "../components/brand";
 import { api } from "../lib/api";
 
 export function LoginPage() {
@@ -25,48 +26,56 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4">
-      <p className="text-sm font-semibold tracking-wide text-accent-strong">Fugo Creative</p>
-      <h1 className="mt-2 mb-6 text-2xl font-semibold">Masuk ke dashboard</h1>
-      <form onSubmit={onSubmit} className="card space-y-4 p-6">
-        <div>
-          <label htmlFor="email" className="field-label">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="username"
-            spellCheck={false}
-            className="field-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+    <div className="flex min-h-dvh flex-col bg-night px-4">
+      <main className="m-auto w-full max-w-sm py-12">
+        <FugoLogo height={36} className="mx-auto" />
+        <div className="card mt-8 p-6 sm:p-8">
+          <h1 className="text-lg font-semibold">Masuk ke Brief Hub</h1>
+          <p className="mt-1 text-sm text-muted">Dashboard internal tim sales.</p>
+          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <div>
+              <label htmlFor="email" className="field-label">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                inputMode="email"
+                required
+                autoFocus
+                autoComplete="username"
+                spellCheck={false}
+                className="field-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="field-label">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="field-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && (
+              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+            <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
+              {submitting && <Spinner />}
+              {submitting ? "Masuk…" : "Masuk"}
+            </button>
+          </form>
         </div>
-        <div>
-          <label htmlFor="password" className="field-label">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="field-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error && (
-          <p role="alert" className="text-sm text-red-600">
-            {error}
-          </p>
-        )}
-        <button type="submit" className="btn-primary w-full" disabled={submitting}>
-          {submitting ? "Masuk…" : "Masuk"}
-        </button>
-      </form>
-    </main>
+      </main>
+    </div>
   );
 }
