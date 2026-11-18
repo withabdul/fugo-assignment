@@ -95,6 +95,7 @@ export async function generateJson(
         responseMimeType: "application/json",
         responseJsonSchema: request.responseJsonSchema,
         temperature: 0.2,
+        thinkingConfig: { thinkingLevel: ctx.config.thinkingLevel },
       },
     },
     ctx,

@@ -6,6 +6,7 @@ export interface Bindings {
   GEMINI_API_KEY: string;
   GEMINI_TEXT_MODEL?: string;
   GEMINI_DECISION_MODEL?: string;
+  GEMINI_THINKING_LEVEL?: string;
   AI_TIMEOUT_MS?: string;
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
@@ -22,6 +23,9 @@ export interface AiConfig {
   apiKey: string;
   textModel: string;
   decisionModel: string;
+  // Reasoning depth for the text model. The task is short extraction and
+  // writing, so "low" keeps latency and cost down.
+  thinkingLevel: string;
   timeoutMs: number;
 }
 
@@ -31,6 +35,7 @@ export function aiConfigFrom(env: Bindings): AiConfig {
     apiKey: env.GEMINI_API_KEY,
     textModel: env.GEMINI_TEXT_MODEL || "gemini-4-hydrogen",
     decisionModel: env.GEMINI_DECISION_MODEL || "gemini-decision-1",
+    thinkingLevel: env.GEMINI_THINKING_LEVEL || "low",
     // Covers both Gemini calls together. Stays under the 30 s that Cloudflare
     // gives waitUntil() work after the response is sent.
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 25_000,

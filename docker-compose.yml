@@ -27,6 +27,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY in .env next to this file}
       GEMINI_TEXT_MODEL: ${GEMINI_TEXT_MODEL:-gemini-4-hydrogen}
       GEMINI_DECISION_MODEL: ${GEMINI_DECISION_MODEL:-gemini-decision-1}
+      GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL:-low}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fugo.test}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env next to this file}
       SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env next to this file}

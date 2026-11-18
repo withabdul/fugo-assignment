@@ -34,6 +34,17 @@ describe("analyzeBrief", () => {
     expect(analysis.model).toBe("gemini-decision-1 + gemini-4-hydrogen");
   });
 
+  test("asks the text model for low thinking effort", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const inner = fakeGemini({ decisions: decisionsOk, generate: generateOk(analysisOk) });
+    const fetchFn: FetchFn = (url, init) => {
+      if (!url.endsWith("/decisions")) bodies.push(JSON.parse(String(init.body)));
+      return inner(url, init);
+    };
+    await analyzeBrief(sampleBrief, { config: testAiConfig, fetchFn });
+    expect(bodies[0]?.generationConfig).toMatchObject({ thinkingConfig: { thinkingLevel: "low" } });
+  });
+
   test("the text model cannot override the decided category or priority", async () => {
     const fetchFn = fakeGemini({
       decisions: decisionsOk,

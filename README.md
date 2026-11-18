@@ -55,7 +55,7 @@ The app runs on http://localhost:8787. Migrations run when the container starts.
 bun run test
 ```
 
-27 tests, no network and no database needed. They cover:
+28 tests, no network and no database needed. They cover:
 
 - AI output validation: valid output, missing field, extra field, non-JSON, unknown category, HTTP error, blocked prompt, timeout, and the priority rounding rule.
 - Form validation: email format, past date, empty fields, and the WIB date boundary.
@@ -72,6 +72,7 @@ bun run test
 | `SESSION_SECRET` | yes | Secret that signs the session JWT. Use a long random string. |
 | `GEMINI_TEXT_MODEL` | no | Default `gemini-4-hydrogen`. |
 | `GEMINI_DECISION_MODEL` | no | Default `gemini-decision-1`. |
+| `GEMINI_THINKING_LEVEL` | no | Thinking level for the text model. Default `low`: the task is short extraction, so more reasoning adds latency without better output. |
 | `AI_TIMEOUT_MS` | no | Deadline for the whole analysis (both calls). Default `25000`. |
 | `PORT` | no | Bun server only. Default `8787`. |
 | `STATIC_DIR` | no | Bun server only. If set, it also serves the built frontend (used in Docker). |
@@ -123,7 +124,7 @@ apps/web          React SPA: public form (/), login (/admin/login), list (/admin
 3. **Step 1, Decisions API** (`gemini-decision-1`): two closed-set questions in one request.
    - `service_category`: single choice from the six categories.
    - `priority`: a rubric with ordered levels Low < Medium < High. The API returns a probability-weighted score, and we round it to the nearest level. A brief split between Low and High becomes Medium, which keeps the order.
-4. **Step 2, text model** (`gemini-4-hydrogen`, JSON mode with `responseJsonSchema`): writes `summary`, `priority_reason`, and `missing_info`. It receives the category and priority from step 1 as fixed facts, so the reason always matches the priority.
+4. **Step 2, text model** (`gemini-4-hydrogen`, thinking level `low`, JSON mode with `responseJsonSchema`): writes `summary`, `priority_reason`, and `missing_info`. It receives the category and priority from step 1 as fixed facts, so the reason always matches the priority.
 5. The two parts are merged and validated with `aiResultSchema` (strict Zod). The calibrated probabilities are saved in `ai_scores` and shown in the dashboard.
 6. Any failure (HTTP error, timeout, blocked prompt, non-JSON, schema error) is caught. The brief is saved with `ai_status = failed` and a readable `ai_error`. An admin can press **Proses ulang AI**.
 

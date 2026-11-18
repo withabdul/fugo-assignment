@@ -6,6 +6,7 @@ export const testAiConfig: AiConfig = {
   apiKey: "test-key",
   textModel: "gemini-4-hydrogen",
   decisionModel: "gemini-decision-1",
+  thinkingLevel: "low",
   timeoutMs: 200,
 };
 
