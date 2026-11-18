@@ -5,6 +5,11 @@ import { AiStatusBadge, PipelineBadge, PriorityBadge } from "../components/badge
 import { api } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 
+const POLL_MS = 10_000;
+const POLL_PROCESSING_MS = 4_000;
+
+const timeFormat = new Intl.DateTimeFormat("id-ID", { timeStyle: "medium", timeZone: "Asia/Jakarta" });
+
 export function BriefListPage() {
   // Filters live in the URL, so a filtered view can be shared or reloaded.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -14,14 +19,30 @@ export function BriefListPage() {
   const [briefs, setBriefs] = useState<BriefListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  // Set after every request, success or failure, so polling never stops on an error.
+  const [fetchedAt, setFetchedAt] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
-  // New briefs are analyzed in the background. Refresh while any is still running.
+  // Polling instead of push: realtime on Workers needs Durable Objects, which is
+  // too much for an internal list. Faster while the AI is still working.
   const anyProcessing = briefs?.some((brief) => brief.ai_status === "processing") ?? false;
   useEffect(() => {
-    if (!anyProcessing) return;
-    const timer = setTimeout(() => setRefreshTick((tick) => tick + 1), 4000);
-    return () => clearTimeout(timer);
-  }, [anyProcessing, briefs]);
+    const delay = anyProcessing ? POLL_PROCESSING_MS : POLL_MS;
+    const refresh = () => setRefreshTick((tick) => tick + 1);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (document.visibilityState === "visible") timer = setTimeout(refresh, delay);
+
+    // No requests from a hidden tab; refresh at once when the admin comes back.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
+      else clearTimeout(timer);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [anyProcessing, fetchedAt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,10 +50,15 @@ export function BriefListPage() {
     if (priority) query.set("priority", priority);
     if (category) query.set("category", category);
 
-    setError(null);
     api<{ briefs: BriefListItem[] }>(`/admin/briefs?${query}`)
-      .then((data) => !cancelled && setBriefs(data.briefs))
-      .catch((err) => !cancelled && setError(err.message));
+      .then((data) => {
+        if (cancelled) return;
+        setBriefs(data.briefs);
+        setError(null);
+        setUpdatedAt(new Date());
+      })
+      .catch((err) => !cancelled && setError(err.message))
+      .finally(() => !cancelled && setFetchedAt(Date.now()));
     return () => {
       cancelled = true;
     };
@@ -50,7 +76,10 @@ export function BriefListPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Brief masuk</h1>
-          <p className="mt-1 text-sm text-muted">Terbaru di atas.</p>
+          <p className="mt-1 text-sm text-muted tabular-nums">
+            Terbaru di atas. Diperbarui otomatis
+            {updatedAt && <> · terakhir {timeFormat.format(updatedAt)}</>}
+          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <FilterSelect
