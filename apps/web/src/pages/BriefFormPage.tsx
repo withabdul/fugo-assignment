@@ -198,7 +198,12 @@ export function BriefFormPage() {
               )}
 
               <div className="flex flex-col-reverse gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted">Semua field wajib diisi.</p>
+                <p className="text-xs text-muted">
+                  <span aria-hidden className="text-red-600">
+                    *
+                  </span>{" "}
+                  Wajib diisi
+                </p>
                 <button type="submit" className="btn btn-primary sm:min-w-36" disabled={submitting}>
                   {submitting && <Spinner />}
                   {submitting ? "Mengirim…" : "Kirim brief"}
@@ -212,8 +217,13 @@ export function BriefFormPage() {
   );
 }
 
+// Every field in this form is required.
 function invalidProps(name: FieldName, error: string | undefined) {
-  return { "aria-invalid": !!error, "aria-describedby": error ? `${name}-error` : undefined };
+  return {
+    "aria-required": true,
+    "aria-invalid": !!error,
+    "aria-describedby": error ? `${name}-error` : undefined,
+  };
 }
 
 function SuccessCard(props: { name: string; company: string; email: string; onReset: () => void }) {
@@ -246,6 +256,10 @@ function Field(props: { label: string; name: string; error?: string; hint?: Reac
       <div className="flex items-baseline justify-between gap-3">
         <label htmlFor={props.name} className="field-label">
           {props.label}
+          {/* Visual only; inputs carry aria-required for screen readers. */}
+          <span aria-hidden className="ml-0.5 text-red-600">
+            *
+          </span>
         </label>
         {props.hint && <span className="text-xs text-muted">{props.hint}</span>}
       </div>
