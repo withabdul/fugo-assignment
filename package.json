@@ -1,0 +1,17 @@
+{
+  "name": "fugo-brief-hub",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:api": "bun --filter @fugo/api dev",
+    "dev:web": "bun --filter @fugo/web dev",
+    "build": "bun --filter @fugo/web build",
+    "test": "bun --filter @fugo/api test",
+    "typecheck": "bun --filter '*' typecheck",
+    "db:migrate": "bun --filter @fugo/api db:migrate",
+    "deploy": "bun run build && bun --filter @fugo/api deploy"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
