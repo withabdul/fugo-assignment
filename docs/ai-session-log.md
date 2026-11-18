@@ -216,4 +216,26 @@ Also checked live: submitting a brief answers in about 100 ms while the AI runs 
 | --- | --- | --- |
 | 17:10 | `6d6690f` | fix: deploy fixes found by the live smoke test |
 
-**17:39 · Prompt:** "update session log nya bro". This update.
+**17:39 · Prompt:** "update session log nya bro". Claude extended this log with sections 6 to 9.
+
+| Time | Commit | Message |
+| --- | --- | --- |
+| 17:40 | `449eb7e` | docs: extend AI session log to polish, race fix, Hyperdrive, and deploy |
+
+## 10. Video plan and required-field markers (17:40–17:48)
+
+**17:40 · Prompt:** "video walkthrough wajib?". Claude checked the brief: the video is one of the four required deliverables and is part of the "README, AI log & komunikasi" score. It proposed a 5-minute outline.
+
+**17:41 · Prompt:** "boleh, buatin naskahnya bro". Claude wrote a recording script outside the repo, with line numbers in `analyze-brief.ts` and `process-brief.ts` checked against the code.
+
+**17:47 · Prompt**
+
+> kalo semua form wajib, harus dikasih asterisk bro
+
+I noticed that the form only said "Semua field wajib diisi" at the bottom, with no marker on the fields. Claude added a red `*` to every label (hidden from screen readers), `aria-required="true"` on every input so screen readers still announce it, and a "* Wajib diisi" legend.
+
+| Time | Commit | Message |
+| --- | --- | --- |
+| 17:48 | `0842989` | feat(web): mark required fields with an asterisk |
+
+**17:48 · Prompt:** "yes, docs juga update". Claude pushed, redeployed, and updated this log and the README.
