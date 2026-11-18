@@ -2,10 +2,9 @@ import { briefListQuerySchema, pipelineUpdateSchema } from "@fugo/shared";
 import { and, desc, eq, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { draftReplyEmail } from "../ai/analyze-brief";
-import { AiError } from "../ai/gemini";
 import type { AppDeps } from "../app";
 import { requireAdmin } from "../auth";
+import { claimEmailDraft, runEmailDraft } from "../briefs/email-draft";
 import { claimForProcessing, runAnalysis } from "../briefs/process-brief";
 import { toBrief, toBriefListItem } from "../briefs/serialize";
 import { briefs } from "../db/schema";
@@ -78,27 +77,21 @@ export function adminBriefRoutes(deps: AppDeps) {
       const saved = await runAnalysis(db, claim.brief, { config: aiConfigFrom(c.env), fetchFn: deps.fetchFn });
       return c.json({ brief: toBrief(saved) });
     })
+    // Answers 202 at once and writes the draft in the background. The page
+    // polls email_draft_status, so leaving and coming back keeps the loader.
     .post("/:id/email-draft", validate("param", idParamSchema), async (c) => {
       const { id } = c.req.valid("param");
       const db = c.get("db");
-      const [row] = await db.select().from(briefs).where(eq(briefs.id, id));
-      if (!row) return c.json({ error: "Brief not found" }, 404);
-
-      try {
-        const draft = await draftReplyEmail(row, row.aiResult, {
-          config: aiConfigFrom(c.env),
-          fetchFn: deps.fetchFn,
-        });
-        const [saved] = await db
-          .update(briefs)
-          .set({ emailDraft: draft, updatedAt: new Date() })
-          .where(eq(briefs.id, id))
-          .returning();
-        return c.json({ brief: toBrief(saved ?? row) });
-      } catch (err) {
-        if (!(err instanceof AiError)) throw err;
-        console.error(`Email draft failed for brief ${id}: [${err.kind}] ${err.message}`);
-        return c.json({ error: "AI gagal membuat draft email. Coba lagi." }, 502);
+      const claim = await claimEmailDraft(db, id);
+      if (!claim.ok) {
+        return claim.reason === "not_found"
+          ? c.json({ error: "Brief not found" }, 404)
+          : c.json({ error: "Draft email untuk brief ini sedang dibuat." }, 409);
       }
+      deps.runInBackground(
+        c,
+        runEmailDraft(db, claim.brief, { config: aiConfigFrom(c.env), fetchFn: deps.fetchFn }),
+      );
+      return c.json({ brief: toBrief(claim.brief) }, 202);
     });
 }

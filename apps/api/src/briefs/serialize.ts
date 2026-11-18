@@ -19,6 +19,8 @@ export function toBrief(row: BriefRow): Brief {
     ai_model: row.aiModel,
     ai_processed_at: row.aiProcessedAt?.toISOString() ?? null,
     email_draft: row.emailDraft,
+    email_draft_status: row.emailDraftStatus,
+    email_draft_error: row.emailDraftError,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };

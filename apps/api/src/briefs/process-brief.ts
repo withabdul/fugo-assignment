@@ -6,7 +6,7 @@ import { briefs, type BriefRow } from "../db/schema";
 
 // A run that has been "processing" this long is treated as dead (for example the
 // Worker was stopped), so a retry is allowed again.
-const STALE_PROCESSING_MS = 2 * 60_000;
+export const STALE_PROCESSING_MS = 2 * 60_000;
 
 export type ClaimResult = { ok: true; brief: BriefRow } | { ok: false; reason: "not_found" | "busy" };
 

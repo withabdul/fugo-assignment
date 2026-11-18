@@ -140,7 +140,7 @@ apps/web          React SPA: public form (/), login (/admin/login), list (/admin
 | GET | `/api/admin/briefs/:id` | session | Detail |
 | PATCH | `/api/admin/briefs/:id/pipeline` | session | Change pipeline status |
 | POST | `/api/admin/briefs/:id/process` | session | Run AI again (waits for the result) |
-| POST | `/api/admin/briefs/:id/email-draft` | session | AI draft of a reply email |
+| POST | `/api/admin/briefs/:id/email-draft` | session | Start an AI draft of a reply email (202, runs in the background) |
 
 Validation errors always have the same shape: `400 { "error": "Validation failed", "fields": { "email": "..." } }`.
 
@@ -161,6 +161,7 @@ One table, `briefs`:
 | `priority`, `service_category` | enum | Copies from `ai_result`, indexed for filters |
 | `ai_error`, `ai_attempts`, `ai_model`, `ai_started_at`, `ai_processed_at` | | AI run tracking |
 | `email_draft` | jsonb | `{ subject, body }` |
+| `email_draft_status`, `email_draft_error`, `email_draft_started_at` | | Draft run tracking, same pattern as the AI analysis |
 | `created_at`, `updated_at` | timestamptz | `created_at` is indexed for sorting |
 
 ## Technical decisions and trade-offs
@@ -205,6 +206,7 @@ Claude Code (Claude Opus 5.5) in the terminal:
 3. **Docker and PostgreSQL version.** Claude's `docker-compose.yml` used `postgres:17-alpine`. I asked for PostgreSQL 18 to match my local version. Claude switched to 18 and moved the volume to `/var/lib/postgresql` (the image changed its data path in 18). Claude then assumed I would run compose on this laptop next to my native Postgres, and moved the DB to host port 5433. I corrected that: compose is for my VPS, and the laptop uses native Postgres. The final compose publishes no DB port, and the DB password comes from `.env` instead of being hard-coded.
 4. **Deploy target.** Claude recommended Railway. I chose Cloudflare, so the design changed to one Worker with static assets, `waitUntil` for background work, and a DB client per request.
 5. **Dashboard did not show new briefs.** While testing by hand I found that new briefs only appeared after a page reload. Claude's list refreshed only while a brief was being processed by the AI. It now polls every 10 s (4 s while the AI runs), stops in a hidden tab, and refreshes when the tab is shown again.
+6. **Email draft loader disappeared.** While testing I started an email draft and went back to the list. The draft was still made, but when I opened the brief again the loader was gone and the button could be clicked again. Claude had kept the "generating" state only in React state, which is lost when the page unmounts. Now the draft runs like the analysis: the server claims the row (`email_draft_status = processing`, one conditional UPDATE, `409` on a double click), answers `202`, writes the draft in the background, and the page polls that status. Claude also fixed two related races on the detail page: the page remounts per brief id, and only the newest request may update the screen, so an old poll cannot undo a newer result.
 
 The full timeline, with my prompts quoted and the commit for each step, is in [docs/ai-session-log.md](docs/ai-session-log.md). It is taken from the Claude Code session transcript.
 

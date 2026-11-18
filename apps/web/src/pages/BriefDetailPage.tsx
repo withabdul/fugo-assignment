@@ -7,7 +7,7 @@ import {
   type Brief,
   type PipelineStatus,
 } from "@fugo/shared";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { AiStatusBadge, PriorityBadge } from "../components/badges";
 import { Spinner } from "../components/brand";
@@ -18,40 +18,61 @@ const POLL_MS = 3000;
 
 type Action = "process" | "pipeline" | "email";
 
-export function BriefDetailPage() {
+// Keyed by id: going from one brief to another mounts a fresh page, so a late
+// response for the old brief can never land on the new one.
+export function BriefDetailRoute() {
   const { id } = useParams<{ id: string }>();
+  return <BriefDetailPage key={id} id={id!} />;
+}
+
+function BriefDetailPage({ id }: { id: string }) {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Action | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Polls and actions can overlap. Each request takes a number, and only the
+  // newest one may write the brief, so an old poll cannot undo a newer result.
+  const latestRequest = useRef(0);
+  const applyIfLatest = useCallback((requestId: number, next: Brief) => {
+    if (requestId === latestRequest.current) setBrief(next);
+  }, []);
+
   const load = useCallback(async () => {
+    const requestId = ++latestRequest.current;
     try {
       const data = await api<{ brief: Brief }>(`/admin/briefs/${id}`);
-      setBrief(data.brief);
+      applyIfLatest(requestId, data.brief);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat brief");
+      if (requestId === latestRequest.current) {
+        setError(err instanceof Error ? err.message : "Gagal memuat brief");
+      }
     }
-  }, [id]);
+  }, [id, applyIfLatest]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  // A new brief is analyzed in the background, so poll until it is done.
+  // Analysis and email draft both run in the background on the server. Their
+  // status is saved there, so polling picks it up again after leaving the page.
+  const serverBusy = brief?.ai_status === "processing" || brief?.email_draft_status === "processing";
   useEffect(() => {
-    if (brief?.ai_status !== "processing" || busy === "process") return;
+    if (!serverBusy || busy === "process") return;
     const timer = setTimeout(() => void load(), POLL_MS);
     return () => clearTimeout(timer);
-  }, [brief, busy, load]);
+  }, [brief, serverBusy, busy, load]);
 
   async function run(kind: Action, request: () => Promise<{ brief: Brief }>) {
+    const requestId = ++latestRequest.current;
     setBusy(kind);
     setActionError(null);
     try {
-      setBrief((await request()).brief);
+      applyIfLatest(requestId, (await request()).brief);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Aksi gagal");
+      // A 409 means the server is already busy; fetch the real state.
+      void load();
     } finally {
       setBusy(null);
     }
@@ -77,6 +98,8 @@ export function BriefDetailPage() {
   const ai = brief.ai_result;
   const scores = brief.ai_scores;
   const processing = brief.ai_status === "processing" || busy === "process";
+  // From the server, so it survives leaving the page; busy covers the click itself.
+  const drafting = brief.email_draft_status === "processing" || busy === "email";
 
   return (
     <div className="space-y-6">
@@ -208,15 +231,22 @@ export function BriefDetailPage() {
             type="button"
             className="btn btn-secondary min-w-44"
             onClick={draftEmail}
-            disabled={busy === "email"}
+            disabled={drafting}
           >
-            {busy === "email" && <Spinner />}
-            {brief.email_draft ? "Buat ulang draft" : "Buat draft dengan AI"}
+            {drafting && <Spinner />}
+            {drafting ? "Membuat draft…" : brief.email_draft ? "Buat ulang draft" : "Buat draft dengan AI"}
           </button>
         </div>
-        <div className="p-5">
-          {busy === "email" && !brief.email_draft ? (
+        <div className="space-y-4 p-5">
+          {brief.email_draft_status === "failed" && brief.email_draft_error && !drafting && (
+            <div className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
+              <p className="font-medium">AI gagal membuat draft. Coba lagi.</p>
+              <p className="mt-0.5 break-words text-red-700/80">{brief.email_draft_error}</p>
+            </div>
+          )}
+          {drafting && !brief.email_draft ? (
             <div aria-busy className="space-y-3">
+              <p className="text-sm text-muted">AI sedang menulis draft…</p>
               <div className="skeleton h-4 w-1/2" />
               <div className="skeleton h-24 w-full" />
             </div>

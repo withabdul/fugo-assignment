@@ -91,6 +91,8 @@ export interface Brief {
   ai_model: string | null;
   ai_processed_at: string | null;
   email_draft: EmailDraft | null;
+  email_draft_status: AiStatus;
+  email_draft_error: string | null;
   created_at: string;
   updated_at: string;
 }

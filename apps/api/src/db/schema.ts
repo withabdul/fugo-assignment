@@ -55,7 +55,13 @@ export const briefs = pgTable(
     aiStartedAt: timestamp("ai_started_at", { withTimezone: true }),
     aiProcessedAt: timestamp("ai_processed_at", { withTimezone: true }),
 
+    // Draft runs in the background like the analysis, so its state lives here,
+    // not in the browser: leaving the page does not lose the "generating" state.
+    // "pending" means no draft was asked for yet.
     emailDraft: jsonb("email_draft").$type<EmailDraft>(),
+    emailDraftStatus: aiStatusEnum("email_draft_status").notNull().default("pending"),
+    emailDraftError: text("email_draft_error"),
+    emailDraftStartedAt: timestamp("email_draft_started_at", { withTimezone: true }),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
