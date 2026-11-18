@@ -1,14 +1,16 @@
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: fugo
       POSTGRES_PASSWORD: fugo
       POSTGRES_DB: fugo
     ports:
-      - "5432:5432"
+      # 5433 on the host, so it does not clash with a local Postgres on 5432.
+      - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18 images keep data in /var/lib/postgresql/18/docker, so mount the parent.
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fugo -d fugo"]
       interval: 2s

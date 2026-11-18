@@ -25,7 +25,7 @@ Requirements: Bun 1.4+, and Postgres (Docker or any local install).
 bun install
 
 # 1. Database
-docker compose up -d db                # or use your own Postgres
+docker compose up -d db                # Postgres 18 on localhost:5433, or use your own Postgres
 
 # 2. Env
 cp apps/api/.env.example apps/api/.env  # then fill GEMINI_API_KEY, SESSION_SECRET, ADMIN_PASSWORD
