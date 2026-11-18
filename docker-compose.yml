@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: fugo
+      POSTGRES_PASSWORD: fugo
+      POSTGRES_DB: fugo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fugo -d fugo"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8787:8787"
+    environment:
+      DATABASE_URL: postgres://fugo:fugo@db:5432/fugo
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY in .env next to this file}
+      GEMINI_TEXT_MODEL: ${GEMINI_TEXT_MODEL:-gemini-4-hydrogen}
+      GEMINI_DECISION_MODEL: ${GEMINI_DECISION_MODEL:-gemini-decision-1}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fugo.test}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env next to this file}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env next to this file}
+
+volumes:
+  pgdata:
