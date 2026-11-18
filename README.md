@@ -180,13 +180,32 @@ One table, `briefs`:
 
 **Tools:** Claude Code (Claude Opus 5.5) in the terminal.
 
-**What it did:** proposed the architecture, wrote most of the code (API, AI layer, React pages, tests, Docker), looked up current library and API docs (Context7, web search for Gemini models and the Decisions API), and drafted this README. I chose the stack, the database, the AI provider, and the deploy target, reviewed the code, and ran the deploy.
+### What I did
 
-**Where I corrected or rejected the AI output:**
+- Set the stack: React + Vite and Hono in a Bun monorepo, instead of the suggested Next.js.
+- Chose PostgreSQL with Drizzle, Gemini as the AI provider, Cloudflare Workers + Neon for the live app, and all four optional features.
+- Proposed the Gemini Decisions API for the closed-set fields (see entry 1 below).
+- Set the thinking level of `gemini-4-hydrogen` to `low`.
+- Set the Docker setup: PostgreSQL 18 in Docker for self-hosting on a VPS, and native PostgreSQL on my laptop for development.
+- Ran the app locally against my native PostgreSQL and tested the flows by hand.
 
-1. **Model choice: I pushed for the Decisions API.** Claude first planned a single text model call for the whole schema. I asked about the Gemini Decisions API. Claude pointed out that it cannot produce `summary`, `priority_reason`, or `missing_info`, and first offered "Hydrogen only" as the recommended option. I did not accept that, because the Decisions API gives calibrated scores for exactly the two fields the dashboard filters on. We settled on the two-step design described above.
-2. **Email validation bug in AI-written code.** Claude wrote `z.email().trim().toLowerCase()`. A test with `"Sari@Example.com "` failed: Zod checks the email format before `trim()` runs, so a trailing space was rejected. Fixed with `z.string().trim().toLowerCase().pipe(z.email())`.
-3. **A wrong test assumption.** Claude wrote a test that expected the text model's extra `service_category`/`priority` keys to be rejected. The code actually overwrites them with the Decisions API values, which is the behavior we want. The test was rewritten to check that, and a separate test now checks that an unknown key (for example `budget_estimate`) is rejected by the strict schema.
-4. **Deploy target.** Claude recommended Railway. I chose Cloudflare, so the design changed to one Worker with static assets, `waitUntil` for background work, and a per-request DB client.
+### What Claude Code did
 
-_(Add your own entries here from your review.)_
+Claude Code (Claude Opus 5.5) in the terminal:
+
+- Proposed the folder structure, the data model, and the API.
+- Wrote most of the code (API, AI layer, React pages, tests, Docker) and the commits.
+- Looked up current library and API docs: Context7 for Hono, React Router, Cloudflare, and Drizzle, and web search for the new Gemini models and the Decisions API.
+- Drafted this README.
+
+### Where I corrected or rejected the AI output
+
+1. **Model design.** Claude first planned one text model call for the whole schema. I asked to use the Gemini Decisions API instead of only `gemini-4-hydrogen`. Claude checked the docs: the Decisions API only answers closed-set questions, so it cannot write `summary`, `priority_reason`, or `missing_info`. Claude then recommended "Hydrogen only", and I did not take that. I asked about a hybrid, and we chose the two-step design above: Decisions API for category and priority (with calibrated scores), Hydrogen for the text.
+2. **Thinking effort.** Claude's first version called Hydrogen with the default thinking level. I asked for `low`, because the task is short extraction and writing. It is now `thinkingConfig.thinkingLevel = "low"`, configurable with `GEMINI_THINKING_LEVEL`, and a test checks that the request sends it.
+3. **Docker and PostgreSQL version.** Claude's `docker-compose.yml` used `postgres:17-alpine`. I asked for PostgreSQL 18 to match my local version. Claude switched to 18 and moved the volume to `/var/lib/postgresql` (the image changed its data path in 18). Claude then assumed I would run compose on this laptop next to my native Postgres, and moved the DB to host port 5433. I corrected that: compose is for my VPS, and the laptop uses native Postgres. The final compose publishes no DB port, and the DB password comes from `.env` instead of being hard-coded.
+4. **Deploy target.** Claude recommended Railway. I chose Cloudflare, so the design changed to one Worker with static assets, `waitUntil` for background work, and a DB client per request.
+
+Bugs that Claude's own tests caught (not my corrections, but worth noting):
+
+- Claude wrote `z.email().trim().toLowerCase()`. A test with `"Sari@Example.com "` failed, because Zod checks the format before `trim()` runs. Fixed with `z.string().trim().toLowerCase().pipe(z.email())`.
+- A test expected extra `service_category`/`priority` keys from the text model to be rejected, but the code overwrites them with the Decisions API values, which is the wanted behavior. The test was rewritten, and a new test checks that unknown keys are rejected.
